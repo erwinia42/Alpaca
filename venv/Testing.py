@@ -22,20 +22,28 @@ def get_test_cases(n):
                         print("FAILED")
                         break
                     currPrice = float(row[randomDay])
-                    values = list (map (lambda d:float(d)/currPrice, row[randomDay+30:randomDay+394:7]))
+                    testPrice = float(row[randomDay + 30])
+                    dataPoints = [31, 37, 60, 90, 180, 360]
+                    values = [percentage_change(currPrice, testPrice)]
+                    values.extend(list (map (lambda n:percentage_change(testPrice, float(row[randomDay + n])), dataPoints)))
                     cases.append(values)
                 break
 
     return cases[:n]
 
+def percentage_change(currentVal, prevVal):
+    return ((currentVal / prevVal) - 1) * 100
+
 def get_training_data(n):
     x = get_test_cases(n)
     ys = list(map(growth, x))
-    xs = x
+    xs = list(map(lambda x:x[1:], x))
     return ys, xs
 
 def growth(l):
-    if 1 > l[0]:
+    if l[0] > 5:
         return 1
+    elif l[0] < -5:
+        return -1
     else:
         return 0
