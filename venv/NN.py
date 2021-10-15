@@ -1,4 +1,5 @@
 import numpy as np
+from Testing import get_training_data
 
 inputValues =[[28.67, 28.19, 21.85, 21.93, 25.47], [25.99, 20.99, 22.1, 21.02, 25.06], [23.98, 25.06, 27.32, 21.1, 18.46],
               [27.29, 26.8, 24.65, 21.41, 18.15], [32.98, 32.56, 32.42, 50.96, 77.59], [59.1, 55.7, 61.94, 77.33, 83.4],
@@ -27,9 +28,9 @@ def relu_derivative(x):
         return 0
 
 nn_structure = [
-    {"input": 5, "output": 7, "activation": relu},
-    {"input": 7, "output": 3, "activation": relu},
-    {"input": 3, "output": 3, "activation": sigmoid},
+    {"input": 52, "output": 60, "activation": sigmoid},
+    {"input": 60, "output": 10, "activation": sigmoid},
+    {"input": 10, "output": 3, "activation": sigmoid},
     {"input": 3, "output": 1, "activation": sigmoid}
 ]
 
@@ -48,13 +49,13 @@ def init_network(neuronStructure):
 
         params["W" + str(layerIndex)] = np.random.randn(
             output_size, input_size) * 0.1
-        params["b" + str(layerIndex)] = np.random.randn(
-            output_size, 1) * 0.1
+        #params["b" + str(layerIndex)] = np.random.randn(
+         #   output_size, 1) * 0.1
 
     return params
 
-def single_layer_forward(prevLayer, weights, biases, activation_function=sigmoid):
-    currentPreAcc = activation_function(np.dot(weights, prevLayer) + biases)
+def single_layer_forward(prevLayer, weights, activation_function=sigmoid): #commented out bias param
+    currentPreAcc = activation_function(np.dot(weights, prevLayer)) #+ biases)
     return activation_function(currentPreAcc), currentPreAcc
 
 def forward_propagataion(input, params, neuronStructure):
@@ -66,9 +67,9 @@ def forward_propagataion(input, params, neuronStructure):
         prevLayer = currLayer
 
         weights = params["W" + str(layerIndex)]
-        biases = params["b" + str(layerIndex)]
+        #biases = params["b" + str(layerIndex)]
         a_func = neuronStructure[i]["activation"]
-        currLayer, currPreFunc = single_layer_forward(prevLayer, weights, biases, activation_function=a_func)
+        currLayer, currPreFunc = single_layer_forward(prevLayer, weights, activation_function=a_func) #Bias
 
         mem["A" + str(i)] = prevLayer
         mem["Z" + str(layerIndex)] = currPreFunc
@@ -79,7 +80,7 @@ def get_cost(yHat, y):
     return (yHat-y)**2
 
 
-def single_layer_backward(currLayerDiff, weights, biases, preFunc, prevLayer, activation=relu):
+def single_layer_backward(currLayerDiff, weights, preFunc, prevLayer, activation=relu): #bias 3
     m = prevLayer.shape[1]
 
     if activation == relu:
@@ -90,17 +91,17 @@ def single_layer_backward(currLayerDiff, weights, biases, preFunc, prevLayer, ac
     #Math is hard
     preFuncDiff = a_func(currLayerDiff, preFunc)
     weightDiff = np.dot(preFuncDiff, prevLayer.T) / m
-    biasDiff = np.sum(preFuncDiff, axis=1, keepdims=True) / m
+    #biasDiff = np.sum(preFuncDiff, axis=1, keepdims=True) / m
     prevLayerDiff = np.dot(weights.T, preFuncDiff)
 
-    return prevLayerDiff, weightDiff, biasDiff
+    return prevLayerDiff, weightDiff#, biasDiff
 
 def backward_propagation(yHat, y, mem, params, neuronStructure):
     param_changes = {}
     y = y.reshape(yHat.shape)
 
     #The first diff
-    prevLayerDiff = -(np.divide(y, yHat) - np.divide(1-y, 1-yHat))
+    prevLayerDiff = -2*(yHat - y)
 
     for prevIndex, layer in reversed(list(enumerate(neuronStructure))):
         currIndex = prevIndex + 1
@@ -111,13 +112,13 @@ def backward_propagation(yHat, y, mem, params, neuronStructure):
         prevLayer = mem["A" + str(prevIndex)]
         currPreFunc = mem["Z" + str(currIndex)]
         currWeights = params["W" + str(currIndex)]
-        currBiases = params["b" + str(currIndex)]
+        #currBiases = params["b" + str(currIndex)]
 
-        prevLayerDiff, currWeightDiff, currBiasDiff = single_layer_backward(currLayerDiff, currWeights, currBiases,
+        prevLayerDiff, currWeightDiff = single_layer_backward(currLayerDiff, currWeights,
                                                                         currPreFunc, prevLayer, activation=a_func)
 
         param_changes["dW" + str(currIndex)] = currWeightDiff
-        param_changes["db" + str(currIndex)] = currBiases
+        #param_changes["db" + str(currIndex)] = currBiases
 
     return param_changes
 
@@ -125,24 +126,31 @@ def update(params, param_changes, neuronStructure, learning_rate):
     for i, layer in enumerate(neuronStructure):
         layerIndex = i + 1
         params["W" + str(layerIndex)] -= param_changes["dW" + str(layerIndex)] * learning_rate
-        params["b" + str(layerIndex)] -= param_changes["db" + str(layerIndex)] * learning_rate
+        #params["b" + str(layerIndex)] -= param_changes["db" + str(layerIndex)] * learning_rate
     return params
 
+n = 100000
 structure = nn_structure
 params = init_network(structure)
-input = np.array([inputValues[1]]).T / 1000
-input = np.array([inputValues[1]]).T / 1000
-expectedY = np.array([[YHats[1]]]) / 1000
+ys, xs = get_training_data(n)
+cost = {"[0]": [], "[1]": [], "cost": []}
 
-for i in range(10000):
+for i in range(n):
+    if ((i + 1) % (n // 10) == 0):
+        print(str((i/n)*100)+"% Done")
+
+    input = np.array([xs[i]]).T / 1000
+    y = np.array([ys[i]])
 
     yHat, mem = forward_propagataion(input, params, structure)
-    param_changes = backward_propagation(yHat, expectedY, mem, params, structure)
+    param_changes = backward_propagation(yHat, y, mem, params, structure)
     params = update(params, param_changes, structure, 0.1)
 
-    print(get_cost(yHat, expectedY))
-    print(yHat)
+    cost[str(y)].append(yHat)
+
+for i in range(10):
+    print(i)
+    print("1:", sum(cost["[1]"][i*10:(i+1)*10])/len(cost["[1]"][i*10:(i+1)*10]))
+    print("0:", sum(cost["[0]"][i*10:(i+1)*10])/len(cost["[0]"][i*10:(i+1)*10]))
 
 print(params)
-
-

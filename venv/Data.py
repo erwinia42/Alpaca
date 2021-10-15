@@ -44,7 +44,7 @@ with open("data.csv", "w", newline="") as f:
     for company in SP500json:
         symbol = company["Symbol"]
 
-        row = [symbol] + list(get_open(symbol, 10))[::-1]
+        row = [symbol] + list(map(lambda s:float(s), list(get_open(symbol, 10))[::-1]))
 
-        if len(row) > 367:
+        if len(row) > 397:
             writer.writerow(row)
