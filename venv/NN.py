@@ -1,14 +1,8 @@
 import numpy as np
 import math
+import matplotlib.pyplot as plt
 from tqdm import tqdm
-from Testing import get_training_data
-
-
-inputValues =[[28.67, 28.19, 21.85, 21.93, 25.47], [25.99, 20.99, 22.1, 21.02, 25.06], [23.98, 25.06, 27.32, 21.1, 18.46],
-              [27.29, 26.8, 24.65, 21.41, 18.15], [32.98, 32.56, 32.42, 50.96, 77.59], [59.1, 55.7, 61.94, 77.33, 83.4],
-              [32.35, 32.7, 32.27, 42.66, 79.7], [32.8, 32.85, 32.04, 44.89, 78.73], [189.01, 182.31, 177.88, 153.13, 108.36],
-              [197, 186.27, 181.81, 150.02, 110.66]]
-YHats = [28.61, 26.19, 24.13, 27.43, 33.08, 59.37, 32.63, 32.35, 188.93, 197.86]
+from TestingSeq import get_training_data, get_test_train_data
 
 def sigmoid(x):
     return 1/(1+np.exp(-x))
@@ -19,17 +13,29 @@ def relu(x):
 def tanh(x):
     return np.vectorize(math.tanh)(x)
 
+def lin(x):
+    return x
+
+def x3(x):
+    return x**3
+
 def sigmoid_backward(dA, Z):
     sig = sigmoid(Z)
     return dA * sig * (1 - sig)
 
 def relu_backward(dA, Z):
     dZ = dA * np.vectorize(relu_derivative)(Z)
-    return dZ;
+    return dZ
 
 def tanh_backward(dA, Z):
     tan = tanh(Z)
     return dA * (1 - tan**2)
+
+def lin_backward(dA, Z):
+    return dA
+
+def x3_backward(dA, Z):
+    return dA * 3 * (Z**2)
 
 def relu_derivative(x):
     if x >= 0:
@@ -38,9 +44,10 @@ def relu_derivative(x):
         return 0
 
 nn_structure = [
-    {"input": 6, "output": 9, "activation": tanh},
-    {"input": 9, "output": 5, "activation": tanh},
-    {"input": 5, "output": 1, "activation": tanh}
+    {"input": 7, "output": 80, "activation": tanh},
+    {"input": 80, "output": 30, "activation": tanh},
+    {"input": 30, "output": 2, "activation": tanh},
+    {"input": 2, "output": 1, "activation": tanh}
 ]
 
 nn_structure_simple = [
@@ -96,8 +103,12 @@ def single_layer_backward(currLayerDiff, weights, biases, preFunc, prevLayer, ac
         a_func = relu_backward
     elif activation == tanh:
         a_func = tanh_backward
-    else:
+    elif activation == lin:
+        a_func = lin_backward
+    elif activation == sigmoid:
         a_func = sigmoid_backward
+    elif activation == x3:
+        a_func = x3_backward
 
     #Math is hard
     preFuncDiff = a_func(currLayerDiff, preFunc)
@@ -140,32 +151,76 @@ def update(params, param_changes, neuronStructure, learning_rate):
         params["b" + str(layerIndex)] -= param_changes["db" + str(layerIndex)] * learning_rate
     return params
 
-n = 1000000
-structure = nn_structure
-params = init_network(structure)
-ys, xs = get_training_data(n)
-estimates = {"[-1]": [[] for _ in range(10)], "[0]": [[] for _ in range(10)], "[1]": [[] for _ in range(10)]}
-cost = []
+def train_network(ys, xs, structure, learning_rate):
+    params = init_network(structure)
+    cost_history = []
 
-for i in tqdm(range(n), desc="Training Network..."):
-    input = np.array([xs[i]]).T / 1000
-    y = np.array([ys[i]])
+    for i in tqdm(range(len(xs)), desc="Training Network..."):
+        input = np.array([xs[i]]).T
+        y = np.array([ys[i]])
 
-    yHat, mem = forward_propagataion(input, params, structure)
-    param_changes = backward_propagation(yHat, y, mem, params, structure)
-    params = update(params, param_changes, structure, 0.1)
+        yHat, mem = forward_propagataion(input, params, structure)
 
-    estimates[str(y)][i // (n//10)].append(yHat)
-    cost.append(get_cost(yHat, y))
+        param_changes = backward_propagation(yHat, y, mem, params, structure)
+        params = update(params, param_changes, structure, learning_rate)
 
+        cost_history.append(get_cost(yHat, y))
 
-def get_tenth(l, i):
-    return l[(len(l) // 10) * i: (len(l) // 10) * (i + 1)]
+    return params, cost_history
 
-for i in range(10):
-    print(i)
-    print("1:", sum(estimates["[1]"][i]) / len(estimates["[1]"][i]), len(estimates["[1]"][i]))
-    print("0:", sum(estimates["[0]"][i]) / len(estimates["[0]"][i]), len(estimates["[0]"][i]))
-    print("-1:", sum(estimates["[-1]"][i]) / len(estimates["[-1]"][i]), len(estimates["[-1]"][i]))
-    print("Cost:", sum(get_tenth(cost, i)) / len(get_tenth(cost, i)), len(get_tenth(cost, i)))
+def test_network(testys, testxs, params, structure, epochs):
+    costs = []
+    best = []
+    worst = []
+    for i in range(len(testxs)):
+        input = np.array([testxs[i]]).T
+        y = np.array([testys[i]])
 
+        yHat, _ = forward_propagataion(input, params, structure)
+        costs.append(get_cost(yHat, y))
+
+        if len(best) < 10:
+            best.append((yHat, y))
+        elif(yHat > min(best)).any():
+            best.remove(min(best))
+            best.append((yHat, y))
+
+        if len(worst) < 10:
+            worst.append((yHat, y))
+        elif(yHat < max(worst)).any():
+            worst.remove(max(worst))
+            worst.append((yHat, y))
+
+    return costs, best, worst
+
+def n_value_rolling(n, l):
+    retList = []
+    for i in range(len(l) - n):
+        retList.append(sum(l[i:i + n]) / n)
+
+    return retList
+
+ys, xs, testys, testxs = get_test_train_data(10000)
+params, cost_history = train_network(ys, xs, nn_structure, 0.001)
+print("Training Start:", sum(cost_history[:1000]) / len(cost_history[:1000]))
+print("Training End:", sum(cost_history[-10000:]) / len(cost_history[-10000:]))
+
+test_cost, bestVals, worstVals = test_network(testys, testxs, params, nn_structure)
+print("Test:", sum(test_cost) / len(test_cost))
+
+res = 0
+for guess, correct in bestVals:
+    print("Top value: ", guess, correct)
+    res += correct / len(bestVals)
+print("Res+:", res)
+
+res = 0
+for guess, correct in worstVals:
+    print("Bot value: ", guess, correct)
+    res += correct / len(worstVals)
+print("Res-:", res)
+
+print(params)
+
+plt.plot(n_value_rolling(10000, [val[0][0] for val in cost_history]))
+plt.show()

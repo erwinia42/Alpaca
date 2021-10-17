@@ -25,26 +25,38 @@ def get_open(symbol, years):
     BARS_URL = DATA_URL + "/v2/stocks/"+symbol+"/bars"
 
     today = datetime.date.today()
-    yesterday = today - datetime.timedelta(days = 1)
-    endOfData = today - datetime.timedelta(days = years * 365)
 
-    data = {
-        "start" : str(endOfData),
-        "end" : str(yesterday),
-        "timeframe" : "1Day"
-    }
-    r = requests.get(BARS_URL, params=data, headers = Headers)
-    d = json.loads(r.content)["bars"]
+    d = []
 
+    for i in range(years // 3):
+        yesterday = today - datetime.timedelta(days = 1)
+        endOfData = today - datetime.timedelta(days = 261 * 3)
+
+        data = {
+            "start" : str(endOfData),
+            "end" : str(yesterday),
+            "timeframe" : "1Day"
+        }
+        
+        r = requests.get(BARS_URL, params = data, headers = Headers)
+        rd = json.loads(r.content)["bars"]
+
+        if rd:
+            d.extend(rd)
+        else:
+            break
+
+        today = today - datetime.timedelta(days = (261 * 3) + 1)
+           
     return map(lambda d:d["o"], d)
 
-with open("data.csv", "w", newline="") as f:
+with open(DATA_PATH, "w", newline="") as f:
     writer = csv.writer(f)
 
     for company in SP500json:
         symbol = company["Symbol"]
 
-        row = [symbol] + list(map(lambda s:float(s), list(get_open(symbol, 10))[::-1]))
+        row = [symbol] + list(map(lambda s:float(s), list(get_open(symbol, 20))[::-1]))
 
-        if len(row) > 397:
+        if len(row) > 362:
             writer.writerow(row)
