@@ -1,0 +1,23 @@
+{
+    "Updated": "2021-10-22",
+    "Positions": [
+        {
+            "Symbol": "BBBY",
+            "Amount": 69.0,
+            "Open": "2021-10-22",
+            "Close": "2021-11-21"
+        },
+        {
+            "Symbol": "ISRG",
+            "Amount": 2.0,
+            "Open": "2021-10-22",
+            "Close": "2021-11-21"
+        },
+        {
+            "Symbol": "MCHP",
+            "Amount": 13.0,
+            "Open": "2021-10-22",
+            "Close": "2021-11-21"
+        }
+    ]
+}

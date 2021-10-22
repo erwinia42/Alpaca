@@ -1,6 +1,5 @@
 import numpy as np
 import math, json
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 from TestingSeq import get_training_data, get_test_train_data
 
@@ -44,10 +43,10 @@ def relu_derivative(x):
         return 0
 
 nn_structure = [
-    {"input": 8, "output": 80, "activation": tanh},
-    {"input": 80, "output": 30, "activation": tanh},
-    {"input": 30, "output": 2, "activation": tanh},
-    {"input": 2, "output": 1, "activation": tanh}
+    {"input": 8, "output": 128, "activation": relu},
+    {"input": 128, "output": 24, "activation": tanh},
+    {"input": 24, "output": 5, "activation": tanh},
+    {"input": 5, "output": 1, "activation": tanh}
 ]
 
 nn_structure_simple = [
@@ -156,7 +155,6 @@ def train_network(ys, xs, structure, learning_rate, epochs):
     cost_history = []
 
     for j in range(epochs):
-        costs = []
         for i in tqdm(range(len(xs)), desc="Training Network..." + str(j + 1) + "/" + str(epochs)):
             input = np.array([xs[i]]).T
             y = np.array([ys[i]])
@@ -166,8 +164,8 @@ def train_network(ys, xs, structure, learning_rate, epochs):
             param_changes = backward_propagation(yHat, y, mem, params, structure)
             params = update(params, param_changes, structure, learning_rate)
 
-            costs.append(get_cost(yHat, y))
-        cost_history.append(sum(costs)/len(costs))
+            cost_history.append(get_cost(yHat, y))
+
     return params, cost_history
 
 def test_network(testys, testxs, params, structure):
@@ -224,14 +222,22 @@ def get_params():
         paramArray[key] = np.array(value)
     return paramArray
 
+def write_params(params):
+    paramJSON = {}
+    for key, value in params.items():
+        paramJSON[key] = value.tolist()
+
+    with open("params.json", "w") as f:
+        json.dump(paramJSON, f, sort_keys=False, indent=4)
+
 def main():
     ys, xs, testys, testxs = get_test_train_data(1)
-    #params, cost_history = train_network(ys, xs, nn_structure, 0.001, 1)
-    #print("Training Start:", sum(cost_history[:100]) / len(cost_history[:100]))
-    #print("Training End:", sum(cost_history[-10000:]) / len(cost_history[-10000:]))
+    #params, cost_history = train_network(ys, xs, nn_structure, 0.001, 10)
+    #print("Training Start:", sum(cost_history[:1000]) / len(cost_history[:1000]))
+    #print("Training End:", sum(cost_history[-1000:]) / len(cost_history[-1000:]))
 
+    #write_params(params)
     params = get_params()
-
     test_cost, bestVals, worstVals = test_network(testys, testxs, params, nn_structure)
     print("Test:", sum(test_cost) / len(test_cost))
 

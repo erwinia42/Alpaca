@@ -1,14 +1,7 @@
 from Config import *
-import requests, json, csv, datetime
+from TestingSeq import percentage_change
+import json, csv, datetime
 
-Headers = {"APCA-API-KEY-ID": API_KEY, "APCA-API-SECRET-KEY": SECRET_KEY}
-
-ACCOUNT_URL = BASE_URL + "/v2/account"
-ORDERS_URL = BASE_URL + "/v2/orders"
-
-def get_account():
-    r = requests.get(ACCOUNT_URL, headers=Headers)
-    return json.loads(r.content)
 
 def create_order(symbol, qty, side="buy", type="market", time_in_force="day"):
     data = {
@@ -42,13 +35,17 @@ def get_open(symbol, years):
         rd = json.loads(r.content)["bars"]
 
         if rd:
+            rd.reverse()
             d.extend(rd)
         else:
             break
 
-        today = today - datetime.timedelta(days = (261 * 3) + 1)
-           
-    return map(lambda d:d["o"], d)
+        today = today - datetime.timedelta(days = (261 * 3))
+    if not d:
+        return []
+    returnData = [d[0]["c"]]
+    returnData.extend(list(map(lambda d:d["o"], d)))
+    return returnData
 
 def nameSort(x):
     return x["Name"]
@@ -77,10 +74,26 @@ def updateData():
             print(company)
             symbol = company["Symbol"]
 
-            row = [symbol] + list(map(lambda s:float(s), list(get_open(symbol, 20))[::-1]))
+            row = [symbol] + list(map(lambda s:float(s), get_open(symbol, 20)))
 
-            if len(row) > 362:
+            if len(row) > 22 + DATA_POINTS[-1]:
                 writer.writerow(row)
+
+def get_todays_data():
+
+    companies = {}
+    with open(DATA_PATH, "r") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if len(row) > DATA_POINTS[-1] + 1:
+                todaysPrice = float(row[1])
+                data = list(map(lambda n: percentage_change(todaysPrice, float(row[n])), DATA_POINTS))
+                symbol = row[0]
+                companies[symbol] = {"Data": data, "Price":todaysPrice}
+            else:
+                continue
+
+    return companies
 
 if __name__ == '__main__':
     updateData()

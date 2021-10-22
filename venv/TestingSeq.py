@@ -13,12 +13,12 @@ def get_test_cases():
                 print("ERROR, DATA TOO SHORT FOR SYMBOL", row[0])
             else:
                 startDay = 1
-                while(startDay + 290 < len(row)):
+                while(startDay + 22 + DATA_POINTS[-1] < len(row)):
 
                     targetPrice = float(row[startDay])
-                    testPrice = float(row[startDay + 30])
+                    testPrice = float(row[startDay + 22])
 
-                    dataPoints = [31, 32, 35, 52, 74, 96, 160, 290] #261 business days in a year
+                    dataPoints = [point + 22 for point in DATA_POINTS]
 
                     values = [percentage_change(targetPrice, testPrice)]
                     values.extend(list(map(lambda n: percentage_change(testPrice, float(row[startDay + n])), dataPoints)))
