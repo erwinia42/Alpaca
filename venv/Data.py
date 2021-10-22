@@ -50,13 +50,37 @@ def get_open(symbol, years):
            
     return map(lambda d:d["o"], d)
 
-with open(DATA_PATH, "w", newline="") as f:
-    writer = csv.writer(f)
+def nameSort(x):
+    return x["Name"]
 
-    for company in SP500json:
-        symbol = company["Symbol"]
+def combine(*indexes):
+    allStocks = []
+    for index in indexes:
+        for stock in index:
+            alreadyExists = False
+            for currStock in allStocks:
+                if stock["Symbol"] == currStock["Symbol"]:
+                    alreadyExists = True
+                    break
+            if not alreadyExists:
+                allStocks.append({"Symbol": stock["Symbol"], "Name": stock["Name"]})
+    allStocks.sort(key=nameSort)
+    return allStocks
 
-        row = [symbol] + list(map(lambda s:float(s), list(get_open(symbol, 20))[::-1]))
+def updateData():
+    allCompanies = combine(SP500json, Nasdaq100json)
 
-        if len(row) > 362:
-            writer.writerow(row)
+    with open(DATA_PATH, "w", newline="") as f:
+        writer = csv.writer(f)
+
+        for company in allCompanies:
+            print(company)
+            symbol = company["Symbol"]
+
+            row = [symbol] + list(map(lambda s:float(s), list(get_open(symbol, 20))[::-1]))
+
+            if len(row) > 362:
+                writer.writerow(row)
+
+if __name__ == '__main__':
+    updateData()

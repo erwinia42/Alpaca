@@ -13,12 +13,12 @@ def get_test_cases():
                 print("ERROR, DATA TOO SHORT FOR SYMBOL", row[0])
             else:
                 startDay = 1
-                while(startDay + 360 < len(row)):
+                while(startDay + 290 < len(row)):
 
                     targetPrice = float(row[startDay])
                     testPrice = float(row[startDay + 30])
 
-                    dataPoints = [31, 32, 37, 60, 90, 180, 360]
+                    dataPoints = [31, 32, 35, 52, 74, 96, 160, 290] #261 business days in a year
 
                     values = [percentage_change(targetPrice, testPrice)]
                     values.extend(list(map(lambda n: percentage_change(testPrice, float(row[startDay + n])), dataPoints)))
@@ -36,6 +36,7 @@ def get_training_data():
     x = get_test_cases()
     ys = list(map(growth, x))
     xs = list(map(lambda x:x[1:], x))
+    ys, xs = shuffle(ys, xs)
     return ys, xs
 
 def growth(l):
@@ -54,8 +55,6 @@ def get_test_train_data(p):
         randomIndex = random.randint(0, len(xs) - 1)
         testys.append(ys.pop(randomIndex))
         testxs.append(xs.pop(randomIndex))
-
-    ys, xs = shuffle(ys, xs)
 
     return ys, xs, testys, testxs
 

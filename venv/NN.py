@@ -1,5 +1,5 @@
 import numpy as np
-import math
+import math, json
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from TestingSeq import get_training_data, get_test_train_data
@@ -44,7 +44,7 @@ def relu_derivative(x):
         return 0
 
 nn_structure = [
-    {"input": 7, "output": 80, "activation": tanh},
+    {"input": 8, "output": 80, "activation": tanh},
     {"input": 80, "output": 30, "activation": tanh},
     {"input": 30, "output": 2, "activation": tanh},
     {"input": 2, "output": 1, "activation": tanh}
@@ -151,27 +151,32 @@ def update(params, param_changes, neuronStructure, learning_rate):
         params["b" + str(layerIndex)] -= param_changes["db" + str(layerIndex)] * learning_rate
     return params
 
-def train_network(ys, xs, structure, learning_rate):
+def train_network(ys, xs, structure, learning_rate, epochs):
     params = init_network(structure)
     cost_history = []
 
-    for i in tqdm(range(len(xs)), desc="Training Network..."):
-        input = np.array([xs[i]]).T
-        y = np.array([ys[i]])
+    for j in range(epochs):
+        costs = []
+        for i in tqdm(range(len(xs)), desc="Training Network..." + str(j + 1) + "/" + str(epochs)):
+            input = np.array([xs[i]]).T
+            y = np.array([ys[i]])
 
-        yHat, mem = forward_propagataion(input, params, structure)
+            yHat, mem = forward_propagataion(input, params, structure)
 
-        param_changes = backward_propagation(yHat, y, mem, params, structure)
-        params = update(params, param_changes, structure, learning_rate)
+            param_changes = backward_propagation(yHat, y, mem, params, structure)
+            params = update(params, param_changes, structure, learning_rate)
 
-        cost_history.append(get_cost(yHat, y))
-
+            costs.append(get_cost(yHat, y))
+        cost_history.append(sum(costs)/len(costs))
     return params, cost_history
 
-def test_network(testys, testxs, params, structure, epochs):
+def test_network(testys, testxs, params, structure):
     costs = []
     best = []
     worst = []
+    values = {}
+    for i in range(10):
+        values[str(i/10)] = []
     for i in range(len(testxs)):
         input = np.array([testxs[i]]).T
         y = np.array([testys[i]])
@@ -179,48 +184,67 @@ def test_network(testys, testxs, params, structure, epochs):
         yHat, _ = forward_propagataion(input, params, structure)
         costs.append(get_cost(yHat, y))
 
-        if len(best) < 10:
+        for i in range(10):
+            if yHat > (i / 10):
+                values[str(i/10)].append((yHat, y))
+
+        if len(best) < 100:
             best.append((yHat, y))
-        elif(yHat > min(best)).any():
+        elif (yHat > min(best)).any():
             best.remove(min(best))
             best.append((yHat, y))
 
-        if len(worst) < 10:
+        if len(worst) < 100:
             worst.append((yHat, y))
         elif(yHat < max(worst)).any():
             worst.remove(max(worst))
             worst.append((yHat, y))
 
+    for i in range(10):
+        val = 0
+        guesses = values[str(i/10)]
+        for guess, correct in guesses:
+            val += correct / len(guesses)
+        print(i/10, val)
+
     return costs, best, worst
 
-def n_value_rolling(n, l):
-    retList = []
-    for i in range(len(l) - n):
-        retList.append(sum(l[i:i + n]) / n)
+def ask_network(x, params, structure):
+    input = np.array([x]).T
+    guess, _ = forward_propagataion(input, params, structure)
+    return guess
 
-    return retList
+def get_params():
+    paramArray = {}
 
-ys, xs, testys, testxs = get_test_train_data(10000)
-params, cost_history = train_network(ys, xs, nn_structure, 0.001)
-print("Training Start:", sum(cost_history[:1000]) / len(cost_history[:1000]))
-print("Training End:", sum(cost_history[-10000:]) / len(cost_history[-10000:]))
+    with open("params.json", "r") as f:
+        paramJSON = json.load(f)
 
-test_cost, bestVals, worstVals = test_network(testys, testxs, params, nn_structure)
-print("Test:", sum(test_cost) / len(test_cost))
+    for key, value in paramJSON.items():
+        paramArray[key] = np.array(value)
+    return paramArray
 
-res = 0
-for guess, correct in bestVals:
-    print("Top value: ", guess, correct)
-    res += correct / len(bestVals)
-print("Res+:", res)
+def main():
+    ys, xs, testys, testxs = get_test_train_data(1)
+    #params, cost_history = train_network(ys, xs, nn_structure, 0.001, 1)
+    #print("Training Start:", sum(cost_history[:100]) / len(cost_history[:100]))
+    #print("Training End:", sum(cost_history[-10000:]) / len(cost_history[-10000:]))
 
-res = 0
-for guess, correct in worstVals:
-    print("Bot value: ", guess, correct)
-    res += correct / len(worstVals)
-print("Res-:", res)
+    params = get_params()
 
-print(params)
+    test_cost, bestVals, worstVals = test_network(testys, testxs, params, nn_structure)
+    print("Test:", sum(test_cost) / len(test_cost))
 
-plt.plot(n_value_rolling(10000, [val[0][0] for val in cost_history]))
-plt.show()
+    res = 0
+    for guess, correct in bestVals:
+        print(guess, correct)
+        res += correct / len(bestVals)
+    print("Res+:", res)
+
+    res = 0
+    for guess, correct in worstVals:
+        res += correct / len(worstVals)
+    print("Res-:", res)
+
+if __name__ == '__main__':
+        main()
