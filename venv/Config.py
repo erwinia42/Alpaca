@@ -1,5 +1,10 @@
 API_KEY= "PKE5I234UTG1J6WZBSOS"
 SECRET_KEY = "f7njGfdtz0yPjMc8WFx4peQ6jFEqCcraFpz7JXHg"
+Headers = {"APCA-API-KEY-ID": API_KEY, "APCA-API-SECRET-KEY": SECRET_KEY}
+
+ACCOUNT_URL = BASE_URL + "/v2/account"
+ORDERS_URL = BASE_URL + "/v2/orders"
+POSITION_URL = BASE_URL + "/v2/positions"
 BASE_URL = "https://paper-api.alpaca.markets"
 DATA_URL = "https://data.alpaca.markets"
 
@@ -10,3 +15,4 @@ DATA_PATH = "data.csv"
 PARAM_PATH = "params.json"
 POSITION_PATH = "positions.json"
 DATA_POINTS = [1,2,5,22,44,66,130,260]
+

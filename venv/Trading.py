@@ -21,8 +21,10 @@ def get_suggestions():
     suggestedBuy = []
     for symbol, data in companies.items():
         expected = ask_network(data["Data"], params, nn_structure)
+        print(symbol, expected)
 
-        if expected > 0.70:
+        if expected > 0.60: #Changed from 0.7 to 0.6 05/11-21
+            print("------------------------")
             suggestedBuy.append({"Symbol": symbol, "Price": data["Price"]})
 
     return suggestedBuy
@@ -51,4 +53,5 @@ def update_positions():
         open_position(suggestion["Symbol"], qty, suggestion["Price"]*1.01)
 
 if __name__ == '__main__':
+    updateData()
     update_positions()

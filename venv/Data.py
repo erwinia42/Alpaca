@@ -1,18 +1,6 @@
 from Config import *
 from TestingSeq import percentage_change
-import json, csv, datetime
-
-
-def create_order(symbol, qty, side="buy", type="market", time_in_force="day"):
-    data = {
-        "symbol" : symbol,
-        "qty": qty,
-        "side": side,
-        "type": type,
-        "time_in_force": time_in_force
-    }
-    o = requests.post(ORDERS_URL, json=data, headers=Headers)
-    return json.loads(o.content)
+import json, csv, datetime, requests
 
 def get_open(symbol, years):
     BARS_URL = DATA_URL + "/v2/stocks/"+symbol+"/bars"
@@ -47,8 +35,10 @@ def get_open(symbol, years):
     returnData.extend(list(map(lambda d:d["o"], d)))
     return returnData
 
+
 def nameSort(x):
     return x["Name"]
+
 
 def combine(*indexes):
     allStocks = []
@@ -63,6 +53,7 @@ def combine(*indexes):
                 allStocks.append({"Symbol": stock["Symbol"], "Name": stock["Name"]})
     allStocks.sort(key=nameSort)
     return allStocks
+
 
 def updateData():
     allCompanies = combine(SP500json, Nasdaq100json)
@@ -80,20 +71,20 @@ def updateData():
                 writer.writerow(row)
 
 def get_todays_data():
-
     companies = {}
     with open(DATA_PATH, "r") as f:
         reader = csv.reader(f)
         for row in reader:
             if len(row) > DATA_POINTS[-1] + 1:
                 todaysPrice = float(row[1])
-                data = list(map(lambda n: percentage_change(todaysPrice, float(row[n])), DATA_POINTS))
+                data = list(map(lambda n: percentage_change(todaysPrice, float(row[1+n])), DATA_POINTS))
                 symbol = row[0]
                 companies[symbol] = {"Data": data, "Price":todaysPrice}
             else:
                 continue
 
     return companies
+
 
 if __name__ == '__main__':
     updateData()

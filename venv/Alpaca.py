@@ -1,12 +1,6 @@
 import requests, json
 from Config import *
 
-Headers = {"APCA-API-KEY-ID": API_KEY, "APCA-API-SECRET-KEY": SECRET_KEY}
-
-ACCOUNT_URL = BASE_URL + "/v2/account"
-ORDERS_URL = BASE_URL + "/v2/orders"
-POSITION_URL = BASE_URL + "/v2/positions"
-
 def get_account():
     r = requests.get(ACCOUNT_URL, headers=Headers)
     return json.loads(r.content)
@@ -38,3 +32,5 @@ def close_position(symbol, stocks):
     r = requests.post(ORDERS_URL, json=bodyParams, headers=Headers)
     return json.loads(r.content)
 
+if __name__ == '__main__':
+    print(get_positions())
