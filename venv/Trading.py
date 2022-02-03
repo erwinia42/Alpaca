@@ -7,7 +7,7 @@ import Alpaca
 
 import csv, requests, json, numpy, datetime
 
-def get_suggestions():
+def get_suggestions(companies):
     try:
         params = get_params()
     except:
@@ -16,16 +16,10 @@ def get_suggestions():
         params, _ = train_network(ys, xs, nn_structure, 0.001, 10)
         write_params(params)
 
-    companies = get_todays_data()
-
     suggestedBuy = []
     for symbol, data in companies.items():
         expected = ask_network(data["Data"], params, nn_structure)
-        print(symbol, expected)
-
-        if expected > 0.60: #Changed from 0.7 to 0.6 05/11-21
-            print("------------------------")
-            suggestedBuy.append({"Symbol": symbol, "Price": data["Price"]})
+        suggestedBuy.append({"Symbol": symbol, "Price": data["Price"], "Confidence": float(expected)})
 
     return suggestedBuy
 
@@ -45,12 +39,13 @@ def update_positions():
         if datetime.datetime.strptime(pos.closeDate, "%Y-%m-%d") < datetime.datetime.today():
             print(f"Selling {pos.amount} stocks of {pos.symbol}")
             close_position(pos)
-    newStocks = get_suggestions()
-
+    
+    newStocks = get_suggestions(get_todays_data())
     for suggestion in newStocks:
-        qty = max(1, 1000 // suggestion["Price"])
-        print(f'Buying {qty} stocks of {suggestion["Symbol"]}')
-        open_position(suggestion["Symbol"], qty, suggestion["Price"]*1.01)
+        if suggestion["Confidence"] > 0.6:
+            qty = max(1, 1000 // suggestion["Price"])
+            print(f'Buying {qty} stocks of {suggestion["Symbol"]}')
+            open_position(suggestion["Symbol"], qty, suggestion["Price"]*1.01)
 
 if __name__ == '__main__':
     updateData()

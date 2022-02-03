@@ -2,7 +2,7 @@ from Config import *
 from TestingSeq import percentage_change
 import json, csv, datetime, requests
 
-def get_open(symbol, years):
+def get_close(symbol, years):
     BARS_URL = DATA_URL + "/v2/stocks/"+symbol+"/bars"
 
     today = datetime.date.today()
@@ -31,8 +31,8 @@ def get_open(symbol, years):
         today = today - datetime.timedelta(days = (261 * 3))
     if not d:
         return []
-    returnData = [d[0]["c"]]
-    returnData.extend(list(map(lambda d:d["o"], d)))
+
+    returnData = list(map(lambda d:d["c"], d))
     return returnData
 
 
@@ -65,19 +65,19 @@ def updateData():
             print(company)
             symbol = company["Symbol"]
 
-            row = [symbol] + list(map(lambda s:float(s), get_open(symbol, 20)))
+            row = [symbol] + list(map(lambda s:float(s), get_close(symbol, 20)))
 
             if len(row) > 22 + DATA_POINTS[-1]:
                 writer.writerow(row)
 
-def get_todays_data():
+def get_todays_data(shift = 0):
     companies = {}
     with open(DATA_PATH, "r") as f:
         reader = csv.reader(f)
         for row in reader:
-            if len(row) > DATA_POINTS[-1] + 1:
-                todaysPrice = float(row[1])
-                data = list(map(lambda n: percentage_change(todaysPrice, float(row[1+n])), DATA_POINTS))
+            if len(row) > DATA_POINTS[-1] + 1 + shift:
+                todaysPrice = float(row[1 + shift])
+                data = list(map(lambda n: percentage_change(todaysPrice, float(row[1+shift+n])), DATA_POINTS))
                 symbol = row[0]
                 companies[symbol] = {"Data": data, "Price":todaysPrice}
             else:
